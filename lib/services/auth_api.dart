@@ -1,29 +1,23 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../session/session_manager.dart';
 import 'dio_interceptor.dart';
 
 class AuthApi {
-  final FlutterSecureStorage storage = const FlutterSecureStorage();
+  final SessionManager session = SessionManager();
   late final Dio _dio;
 
   AuthApi() {
     _dio = Dio(BaseOptions(baseUrl: dotenv.env['API_BASE_URL']!));
-    _dio.interceptors.add(AuthInterceptor(storage));
+    _dio.interceptors.add(AuthInterceptor(session.storage));
   }
 
   Future<void> signup(String email, String password) async {
-    try {
-      final response = await _dio.post('/api/auth/signup', data: {
-        'email': email,
-        'password': password,
-      });
+    final response = await _dio.post('/api/auth/signup', data: {
+      'email': email,
+      'password': password,
+    });
 
-      print('Signup success: ${response.data}');
-    } on DioException catch (e) {
-      print('Signup error: ${e.response?.data ?? e.message}');
-      rethrow;
-    }
   }
 
   Future<void> login(String email, String password) async {
@@ -33,6 +27,7 @@ class AuthApi {
     });
 
     final cookies = response.headers.map['set-cookie'];
+
     if (cookies == null) throw Exception('Cookie non presenti nella risposta');
 
     String? accessToken;
@@ -47,14 +42,18 @@ class AuthApi {
     }
 
     if (accessToken != null && refreshToken != null) {
-      await storage.write(key: 'accessToken', value: accessToken);
-      await storage.write(key: 'refreshToken', value: refreshToken);
+      await session.saveTokens(accessToken, refreshToken);
     } else {
       throw Exception('Impossibile estrarre i token dai cookie');
     }
 
-    print('✅ Access Token: $accessToken');
-    print('✅ Refresh Token: $refreshToken');
+    final user = response.data['user'];
+    await session.saveUserRole(user['role']);
+
+// (opzionale)
+    await session.saveUserId(user['id']);
+    await session.saveUserEmail(user['email']);
+
   }
 
   Future<void> resendVerification(String email) async {

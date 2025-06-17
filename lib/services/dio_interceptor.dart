@@ -9,8 +9,11 @@ class AuthInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     final accessToken = await storage.read(key: 'accessToken');
+    final refreshToken = await storage.read(key: 'refreshToken');
     if (accessToken != null) {
-      options.headers['Authorization'] = 'Bearer $accessToken';
+      /*options.headers['Authorization'] = 'Bearer $accessToken';*/
+      options.headers['cookie'] = 'accessToken=$accessToken; refreshToken=$refreshToken';
+
     }
     return handler.next(options);
   }

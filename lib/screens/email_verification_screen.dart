@@ -58,7 +58,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     try {
       await api.login(widget.email, widget.password);
       if (!mounted) return;
-      context.go('/home'); // o la tua home route
+      context.go('/home');
     } on DioException catch (e) {
       final data = e.response?.data;
       print("🔍 response.data: ${e.response?.data}");
