@@ -19,12 +19,22 @@ class EventDetailUserScreen extends StatefulWidget {
 class _EventDetailUserScreenState extends State<EventDetailUserScreen> {
   EventModel? event;
   bool isLoading = true;
+  bool isFavorite = false;
+  late final Dio dio;
+
+
 
   @override
   void initState() {
     super.initState();
+
+    final session = SessionManager();
+    dio = Dio(BaseOptions(baseUrl: dotenv.env['API_BASE_URL']!))
+      ..interceptors.add(AuthInterceptor(session.storage));
+
     _loadEvent();
   }
+
 
   Future<void> _loadEvent() async {
     try {
@@ -37,8 +47,10 @@ class _EventDetailUserScreenState extends State<EventDetailUserScreen> {
 
       setState(() {
         event = data;
+        isFavorite = data.isFavorite;
         isLoading = false;
       });
+
     } catch (e) {
       print('Errore caricamento evento: $e');
       setState(() => isLoading = false);
@@ -58,39 +70,72 @@ class _EventDetailUserScreenState extends State<EventDetailUserScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
-            expandedHeight: 240,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(event!.title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(offset: Offset(0, 0), blurRadius: 4, color: Colors.black),
-                  ],
-                ),
-              ),
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.network(event!.coverImage!, fit: BoxFit.cover),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.6),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+      SliverAppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/home'),
+        ),
+        expandedHeight: 240,
+        pinned: true,
+        flexibleSpace: FlexibleSpaceBar(
+        title: Text(
+          event!.title,
+          style: const TextStyle(
+            color: Colors.white,
+            shadows: [Shadow(offset: Offset(0, 0), blurRadius: 4, color: Colors.black)],
+          ),
+        ),
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+          // Cover Image
+          Image.network(event!.coverImage!, fit: BoxFit.cover),
+
+          // Overlay gradient
+          Container(
+            decoration: BoxDecoration(
+                gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
               ),
             ),
-
           ),
+
+          // Heart Button
+          Positioned(
+            top: 36,
+            right: 16,
+            child: IconButton(
+            icon: Icon(
+              isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: Colors.redAccent,
+              size: 30,
+            ),
+                onPressed: () async {
+                  try {
+                    if (isFavorite) {
+                      await EventApi(dio).removeFromFavorites(event!.id);
+                    } else {
+                      await EventApi(dio).addToFavorites(event!.id);
+                    }
+
+                    setState(() => isFavorite = !isFavorite);
+                  } catch (e) {
+                    print('Errore aggiornamento preferiti: $e');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Errore durante l\'aggiornamento dei preferiti')),
+                    );
+                  }
+                },
+
+            ),
+          ),
+          ],
+        ),
+      ),
+    ),
+
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -158,8 +203,41 @@ class _EventDetailUserScreenState extends State<EventDetailUserScreen> {
                     const Text('📝 Descrizione', style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
                     Text(event!.description!),
-                  ]
+                  ],
+                  const SizedBox(height: 20),
+                  Center(
+                    child: ElevatedButton.icon(
+                      icon: Icon(event!.isBooked ? Icons.cancel : Icons.check_circle),
+                      label: Text(event!.isBooked ? 'Annulla prenotazione' : 'Prenota evento'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: event!.isBooked ? Colors.red : Colors.green,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        try {
+                          if (event!.isBooked) {
+                            await EventApi(dio).cancelBooking(event!.id);
+                          } else {
+                            await EventApi(dio).bookEvent(event!.id);
+                          }
+
+                          // aggiorna evento
+                          final updated = await EventApi(dio).getEventById(event!.id);
+                          setState(() => event = updated);
+                        } catch (e) {
+                          print('❌ Errore prenotazione: $e');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Errore durante ${event!.isBooked ? "l\'annullamento" : "la prenotazione"}')),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+
                 ],
+
               ),
             ),
           )

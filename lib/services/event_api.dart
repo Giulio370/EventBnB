@@ -13,12 +13,26 @@ class EventApi {
     return data.map((json) => EventModel.fromJson(json)).toList();
   }
   Future<EventModel> getEventById(String id) async {
-
-
-
     final response = await _dio.get('/api/events/$id');
     return EventModel.fromJson(response.data);
   }
+  Future<void> addToFavorites(String eventId) async {
+    await _dio.post('/api/events/$eventId/favorite');
+  }
+
+  Future<void> removeFromFavorites(String eventId) async {
+    await _dio.delete('/api/events/$eventId/favorite');
+  }
+
+  Future<void> bookEvent(String eventId) async {
+    await _dio.post('/api/events/$eventId/book');
+  }
+
+  Future<void> cancelBooking(String eventId) async {
+    await _dio.delete('/api/events/$eventId/book');
+  }
+
+
 
 
   Future<List<EventModel>> getMyEvents() async {
