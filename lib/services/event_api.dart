@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import '../models/booking_model.dart';
 import '../models/event_model.dart';
 import '../session/session_manager.dart';
 
@@ -31,6 +34,70 @@ class EventApi {
   Future<void> cancelBooking(String eventId) async {
     await _dio.delete('/api/events/$eventId/book');
   }
+
+
+
+  Future<void> publishEvent(String id) async {
+    await _dio.patch('/api/events/$id/publish');
+  }
+
+  Future<void> cancelEvent(String id) async {
+    await _dio.patch('/api/events/$id/cancel');
+  }
+
+  Future<void> deleteEvent(String id) async {
+    await _dio.delete('/api/events/$id');
+  }
+
+  Future<void> uploadCover(String id, File image) async {
+    final formData = FormData.fromMap({
+      'cover': await MultipartFile.fromFile(image.path),
+    });
+    await _dio.patch('/api/events/$id/cover', data: formData);
+  }
+
+  Future<void> uploadImage(String id, File image) async {
+    final formData = FormData.fromMap({
+      'image': await MultipartFile.fromFile(image.path),
+    });
+    await _dio.patch('/api/events/$id/images', data: formData);
+  }
+
+  Future<void> deleteImage(String id, String imageUrl) async {
+    await _dio.delete(
+      '/api/events/$id/images',
+      data: {'imageUrl': imageUrl},
+    );
+  }
+
+  Future<void> updateEvent(String id, Map<String, dynamic> updatedData) async {
+    await _dio.put('/api/events/$id', data: updatedData);
+  }
+
+  Future<EventModel> createEvent(Map<String, dynamic> eventData) async {
+    final response = await _dio.post('/api/events', data: eventData);
+    return EventModel.fromJson(response.data['event']);
+  }
+
+  Future<List<EventModel>> getUserFavorites() async {
+    final response = await _dio.get('/api/me/favorites');
+    final List data = response.data;
+
+    // Estrai `event` da ogni item prima di fare il parsing
+    return data
+        .map((json) => EventModel.fromJson(json['event']))
+        .toList();
+  }
+
+
+
+  Future<List<BookingModel>> getUserBookings() async {
+    final response = await _dio.get('/api/events/me/bookings');
+    final List data = response.data;
+    return data.map((json) => BookingModel.fromJson(json)).toList();
+  }
+
+
 
 
 

@@ -12,6 +12,7 @@ class EventModel {
   final List<String> images;
   final bool isFavorite;
   final bool isBooked;
+  final int? maxParticipants;
 
 
   EventModel({
@@ -28,6 +29,7 @@ class EventModel {
     required this.images,
     required this.isFavorite,
     required this.isBooked,
+    this.maxParticipants,
   });
 
   factory EventModel.fromJson(Map<String, dynamic> json) {
@@ -45,6 +47,7 @@ class EventModel {
       images: List<String>.from(json['images'] ?? []),
       isFavorite: json['isFavorite'] ?? false,
       isBooked: json['isBooked'] ?? false,
+      maxParticipants: json['maxParticipants'],
 
     );
   }

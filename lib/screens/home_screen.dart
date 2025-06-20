@@ -1,3 +1,4 @@
+import 'package:event_bnb/screens/new_event_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,8 @@ import '../session/session_manager.dart';
 import 'package:dio/dio.dart';
 
 import '../widgets/event_card.dart';
+import '../widgets/organizer_event_card.dart';
+import 'dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -59,14 +62,52 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Text(role == 'user' ? 'Eventi Pubblici' : 'I Miei Eventi'),
         actions: [
+          if (role == 'organizer' || role == 'admin') ...[
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NewEventScreen()),
+                );
+                _loadEvents();
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.bar_chart),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                );
+              },
+            ),
+          ],
+          if (role == 'user')
+            IconButton(
+              icon: const Icon(Icons.list_alt),
+              onPressed: () {
+                context.go('/my-events');
+              },
+            ),
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              context.go('/profile');
+
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await session.clear();
               if (context.mounted) context.go('/login');
             },
-          )
+          ),
+
+
         ],
+
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -74,15 +115,24 @@ class _HomeScreenState extends State<HomeScreen> {
         itemCount: events.length,
         itemBuilder: (context, index) {
           final e = events[index];
-          return EventCard(
+          return role == 'user'
+              ? EventCard(
             event: e,
             onTap: () {
               print('Evento selezionato: ${e.id}');
               context.go('/event/${e.id}');
             },
+          )
+              : OrganizerEventCard(
+            event: e,
+            onTap: () {
+              print('Evento organizzatore: ${e.id}');
+              context.go('/event-organizer/${e.id}');
+            },
           );
         },
       ),
+
 
     );
   }
